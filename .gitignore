@@ -4,3 +4,19 @@
 
 # Never commit a real API key.
 /oracle.env
+.env
+
+# Python Virtual Environments & Bytecode
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+
+# Audio & Temporary Test Artifacts
+*.wav
+test_audio.wav
+
+# Local clones & packages
+faster-whisper/

@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Enchanted Diary of Tom Riddle</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Dancing+Script:wght@600;700&family=MedievalSharp&display=swap');
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: radial-gradient(circle at center, #141118 0%, #060508 100%);
+      font-family: 'Cinzel', serif;
+      color: #e3d7bf;
+      user-select: none;
+    }
+
+    #canvas-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    .ui-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 10;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 24px;
+    }
+
+    header {
+      text-align: center;
+      text-shadow: 0 0 15px rgba(227, 215, 191, 0.4);
+    }
+    h1 {
+      font-size: 26px;
+      letter-spacing: 5px;
+      text-transform: uppercase;
+      color: #d8c29d;
+    }
+    p.subtitle {
+      font-size: 13px;
+      letter-spacing: 3px;
+      color: #8b7d6b;
+      margin-top: 4px;
+    }
+
+    .status-panel {
+      position: absolute;
+      top: 85px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 13px;
+      color: #9c8e77;
+      letter-spacing: 2px;
+      background: rgba(18, 14, 22, 0.75);
+      padding: 8px 24px;
+      border-radius: 20px;
+      border: 1px solid rgba(139, 125, 107, 0.3);
+      backdrop-filter: blur(8px);
+      transition: all 0.5s ease;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .controls-panel {
+      pointer-events: auto;
+      max-width: 680px;
+      width: 95%;
+      margin: 0 auto 10px auto;
+      background: rgba(20, 16, 24, 0.88);
+      border: 1px solid rgba(160, 140, 110, 0.35);
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), 0 0 20px rgba(120, 100, 70, 0.15);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .record-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 15px;
+    }
+
+    .btn {
+      font-family: 'Cinzel', serif;
+      background: linear-gradient(135deg, #2b2216, #18130d);
+      border: 1px solid #735d43;
+      color: #e5d8be;
+      padding: 10px 20px;
+      font-size: 13px;
+      letter-spacing: 2px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .btn:hover:not(:disabled) {
+      background: linear-gradient(135deg, #443522, #241c13);
+      border-color: #c4a77d;
+      box-shadow: 0 0 15px rgba(196, 167, 125, 0.4);
+      transform: translateY(-1px);
+    }
+    .btn:active { transform: translateY(1px); }
+
+    .btn-record.recording {
+      background: linear-gradient(135deg, #5c1818, #300c0c);
+      border-color: #ff5555;
+      box-shadow: 0 0 20px rgba(255, 80, 80, 0.5);
+      animation: pulse-red 1.5s infinite;
+    }
+
+    @keyframes pulse-red {
+      0% { box-shadow: 0 0 10px rgba(255, 60, 60, 0.4); }
+      50% { box-shadow: 0 0 25px rgba(255, 60, 60, 0.8); }
+      100% { box-shadow: 0 0 10px rgba(255, 60, 60, 0.4); }
+    }
+
+    .text-input-row {
+      display: flex;
+      gap: 10px;
+    }
+    input[type="text"] {
+      flex: 1;
+      font-family: 'Cinzel', serif;
+      background: rgba(10, 8, 12, 0.8);
+      border: 1px solid rgba(139, 125, 107, 0.3);
+      color: #f0e6d2;
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      outline: none;
+    }
+    input[type="text"]:focus {
+      border-color: #b59b75;
+      box-shadow: 0 0 10px rgba(181, 155, 117, 0.3);
+    }
+
+    .mic-indicator {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #735d43;
+      display: inline-block;
+    }
+    .btn-record.recording .mic-indicator {
+      background: #ff4d4d;
+    }
+
+    .system-tag {
+      font-size: 11px;
+      color: #877a67;
+      letter-spacing: 1px;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="canvas-container"></div>
+
+  <div class="ui-overlay">
+    <header>
+      <h1>Tom Marvolo Riddle</h1>
+      <p class="subtitle">Wools Orphanage &bull; Hogwarts 1943 &bull; Enchanted Horcrux</p>
+    </header>
+
+    <div class="status-panel" id="status-panel">Connecting to the enchanted diary...</div>
+
+    <div class="controls-panel">
+      <div class="record-row">
+        <button id="record-btn" class="btn btn-record">
+          <span class="mic-indicator"></span>
+          <span id="record-text">Click to Whisper</span>
+        </button>
+        <span class="system-tag" id="system-badge">Connecting...</span>
+      </div>
+
+      <div class="text-input-row">
+        <input type="text" id="whisper-input" placeholder="Or inscribe your words into the page..." />
+        <button id="send-btn" class="btn">Bleed Ink</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = "http://127.0.0.1:5000";
+    let sessionId = "session_" + Math.random().toString(36).substring(2, 10);
+    const statusPanel = document.getElementById("status-panel");
+    const recordBtn = document.getElementById("record-btn");
+    const recordText = document.getElementById("record-text");
+    const whisperInput = document.getElementById("whisper-input");
+    const sendBtn = document.getElementById("send-btn");
+    const systemBadge = document.getElementById("system-badge");
+
+    // -------------------------------------------------------------------------
+    // THREE.JS SETUP & DYNAMIC PARCHMENT CANVAS TEXTURE
+    // -------------------------------------------------------------------------
+    const container = document.getElementById("canvas-container");
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x0c0a0f, 0.08);
+
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+    camera.position.set(0, 0, 7.2);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    container.appendChild(renderer.domElement);
+
+    // Dynamic 2D Offscreen Canvas for drawing the ink writing
+    const parchmentCanvas = document.createElement("canvas");
+    parchmentCanvas.width = 1024;
+    parchmentCanvas.height = 1350;
+    const ctx = parchmentCanvas.getContext("2d");
+
+    const dynamicTexture = new THREE.CanvasTexture(parchmentCanvas);
+    dynamicTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+
+    function redrawParchmentBase() {
+      const grad = ctx.createLinearGradient(0, 0, parchmentCanvas.width, parchmentCanvas.height);
+      grad.addColorStop(0, "#f4eedf");
+      grad.addColorStop(0.5, "#ede2cb");
+      grad.addColorStop(1, "#ded0b3");
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, parchmentCanvas.width, parchmentCanvas.height);
+
+      const vignette = ctx.createRadialGradient(
+        parchmentCanvas.width / 2, parchmentCanvas.height / 2, 380,
+        parchmentCanvas.width / 2, parchmentCanvas.height / 2, 750
+      );
+      vignette.addColorStop(0, "rgba(120, 90, 50, 0)");
+      vignette.addColorStop(0.85, "rgba(85, 60, 30, 0.32)");
+      vignette.addColorStop(1, "rgba(50, 35, 15, 0.60)");
+      ctx.fillStyle = vignette;
+      ctx.fillRect(0, 0, parchmentCanvas.width, parchmentCanvas.height);
+
+      ctx.strokeStyle = "rgba(180, 160, 130, 0.22)";
+      ctx.lineWidth = 1.2;
+      for (let y = 180; y < parchmentCanvas.height - 120; y += 50) {
+        ctx.beginPath();
+        ctx.moveTo(80, y);
+        ctx.lineTo(parchmentCanvas.width - 80, y);
+        ctx.stroke();
+      }
+
+      dynamicTexture.needsUpdate = true;
+    }
+    redrawParchmentBase();
+
+    const bookGeometry = new THREE.BoxGeometry(4.8, 6.3, 0.28);
+    const parchmentMaterial = new THREE.MeshStandardMaterial({
+      map: dynamicTexture,
+      roughness: 0.78,
+      metalness: 0.05
+    });
+
+    const leatherMaterial = new THREE.MeshStandardMaterial({
+      color: 0x1d1510,
+      roughness: 0.6,
+      metalness: 0.1
+    });
+
+    const materials = [
+      leatherMaterial, leatherMaterial, leatherMaterial,
+      leatherMaterial, parchmentMaterial, leatherMaterial
+    ];
+
+    const diary = new THREE.Mesh(bookGeometry, materials);
+    diary.rotation.x = 0.15;
+    scene.add(diary);
+
+    const ambientLight = new THREE.AmbientLight(0xffecc4, 0.7);
+    scene.add(ambientLight);
+
+    const candleLight = new THREE.PointLight(0xffaa44, 2.0, 15);
+    candleLight.position.set(2, 3, 4);
+    scene.add(candleLight);
+
+    const rimLight = new THREE.DirectionalLight(0x6688aa, 0.4);
+    rimLight.position.set(-3, -2, 2);
+    scene.add(rimLight);
+
+    let clock = new THREE.Clock();
+    function animate() {
+      requestAnimationFrame(animate);
+      const t = clock.getElapsedTime();
+      diary.rotation.y = Math.sin(t * 0.5) * 0.035;
+      diary.position.y = Math.sin(t * 0.8) * 0.07;
+      candleLight.intensity = 1.9 + Math.sin(t * 7) * 0.15 + Math.cos(t * 11) * 0.1;
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener("resize", () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // -------------------------------------------------------------------------
+    // INK BLEED CALLIGRAPHY ENGINE
+    // -------------------------------------------------------------------------
+    let currentAnimationId = null;
+
+    function renderInkBleed(userText, responseLines, callback) {
+      if (currentAnimationId) cancelAnimationFrame(currentAnimationId);
+      redrawParchmentBase();
+
+      ctx.save();
+      if (userText) {
+        ctx.font = "italic 28px 'MedievalSharp', cursive";
+        ctx.fillStyle = "rgba(45, 30, 20, 0.45)";
+        ctx.fillText('“' + userText + '”', 120, 220, 784);
+      }
+
+      ctx.font = "bold 38px 'Dancing Script', cursive";
+      ctx.fillStyle = "#16101c";
+      ctx.shadowColor = "rgba(30, 15, 35, 0.4)";
+      ctx.shadowBlur = 4;
+
+      const startY = 360;
+      const lineHeight = 58;
+
+      let fullResponse = responseLines.join(" ");
+      let renderedLines = responseLines.map(() => "");
+      let targetLength = fullResponse.length;
+      let currentGlobalChar = 0;
+
+      function step() {
+        if (currentGlobalChar <= targetLength) {
+          let remaining = currentGlobalChar;
+          for (let i = 0; i < responseLines.length; i++) {
+            if (remaining <= responseLines[i].length) {
+              renderedLines[i] = responseLines[i].substring(0, remaining);
+              for (let j = i + 1; j < responseLines.length; j++) renderedLines[j] = "";
+              break;
+            } else {
+              renderedLines[i] = responseLines[i];
+              remaining -= responseLines[i].length;
+            }
+          }
+
+          redrawParchmentBase();
+          if (userText) {
+            ctx.font = "italic 28px 'MedievalSharp', cursive";
+            ctx.fillStyle = "rgba(45, 30, 20, 0.35)";
+            ctx.fillText('“' + userText + '”', 120, 220, 784);
+          }
+
+          ctx.font = "bold 38px 'Dancing Script', cursive";
+          ctx.fillStyle = "#180f1d";
+          ctx.shadowColor = "rgba(25, 10, 30, 0.4)";
+          ctx.shadowBlur = 4;
+
+          for (let i = 0; i < renderedLines.length; i++) {
+            ctx.fillText(renderedLines[i], 120, startY + (i * lineHeight));
+          }
+
+          dynamicTexture.needsUpdate = true;
+          currentGlobalChar += 1;
+          currentAnimationId = requestAnimationFrame(step);
+        } else {
+          dynamicTexture.needsUpdate = true;
+          if (callback) callback();
+        }
+      }
+
+      step();
+    }
+
+    // -------------------------------------------------------------------------
+    // MICROPHONE VOICE RECORDING (MediaRecorder)
+    // -------------------------------------------------------------------------
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let isRecording = false;
+    let selectedMimeType = "audio/webm";
+
+    function getSupportedMimeType() {
+      const types = [
+        "audio/webm;codecs=opus",
+        "audio/webm",
+        "audio/ogg;codecs=opus",
+        "audio/mp4",
+        "audio/wav"
+      ];
+      for (const t of types) {
+        if (MediaRecorder.isTypeSupported(t)) return t;
+      }
+      return "";
+    }
+
+    async function startRecording() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        selectedMimeType = getSupportedMimeType();
+        mediaRecorder = selectedMimeType 
+          ? new MediaRecorder(stream, { mimeType: selectedMimeType })
+          : new MediaRecorder(stream);
+
+        audioChunks = [];
+        mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+        mediaRecorder.onstop = sendVoiceBuffer;
+
+        mediaRecorder.start();
+        isRecording = true;
+        recordBtn.classList.add("recording");
+        recordText.innerText = "Listening to your whisper...";
+        statusPanel.innerText = "The enchanted pages drink your voice...";
+      } catch (err) {
+        statusPanel.innerText = "Microphone unavailable: " + err.message;
+      }
+    }
+
+    function stopRecording() {
+      if (mediaRecorder && mediaRecorder.state !== "inactive") {
+        mediaRecorder.stop();
+        isRecording = false;
+        recordBtn.classList.remove("recording");
+        recordText.innerText = "Click to Whisper";
+        statusPanel.innerText = "Ink preparing to form...";
+      }
+    }
+
+    recordBtn.addEventListener("click", () => {
+      if (!isRecording) {
+        startRecording();
+      } else {
+        stopRecording();
+      }
+    });
+
+    async function sendVoiceBuffer() {
+      const extension = selectedMimeType.includes("ogg") ? ".ogg" : (selectedMimeType.includes("wav") ? ".wav" : ".webm");
+      const audioBlob = new Blob(audioChunks, { type: selectedMimeType || "audio/webm" });
+      const formData = new FormData();
+      formData.append("audio_file", audioBlob, "whisper" + extension);
+      formData.append("session_id", sessionId);
+
+      try {
+        statusPanel.innerText = "Faster-Whisper Large-V3-Turbo transcribing...";
+        const resp = await fetch(`${API_BASE}/process_voice`, {
+          method: "POST",
+          body: formData
+        });
+        const data = await resp.json();
+        handleAgentResponse(data);
+      } catch (err) {
+        statusPanel.innerText = "Connection error: " + err.message;
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // TEXT INPUT HANDLER
+    // -------------------------------------------------------------------------
+    async function sendTextInput() {
+      const text = whisperInput.value.trim();
+      if (!text) return;
+      whisperInput.value = "";
+      statusPanel.innerText = "The ink sinks into the parchment...";
+
+      try {
+        const resp = await fetch(`${API_BASE}/process_text`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: text, session_id: sessionId })
+        });
+        const data = await resp.json();
+        handleAgentResponse(data);
+      } catch (err) {
+        statusPanel.innerText = "Connection error: " + err.message;
+      }
+    }
+
+    sendBtn.addEventListener("click", sendTextInput);
+    whisperInput.addEventListener("keydown", (e) => { if (e.key === "Enter") sendTextInput(); });
+
+    function handleAgentResponse(data) {
+      statusPanel.innerText = "Tom Riddle writes back...";
+      const lines = data.texture_manifest ? data.texture_manifest.lines : [data.riddle_response];
+      renderInkBleed(data.user_transcript, lines, () => {
+        statusPanel.innerText = "Tom waits patiently for your reply...";
+      });
+    }
+
+    // Initial Health & Capability Probe
+    fetch(`${API_BASE}/health`)
+      .then(res => res.json())
+      .then(d => {
+        statusPanel.innerText = `Diary Active: ${d.llm_provider}`;
+        systemBadge.innerText = `${d.whisper_device.toUpperCase()} (${d.whisper_compute_type}) | ${d.llm_provider}`;
+      })
+      .catch(() => {
+        statusPanel.innerText = "Diary worker offline (port 5000)";
+        systemBadge.innerText = "Worker Offline";
+      });
+  </script>
+</body>
+</html>
